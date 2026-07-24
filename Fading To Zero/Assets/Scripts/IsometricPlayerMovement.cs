@@ -10,15 +10,18 @@ public class PlayerMovementIsometric : MonoBehaviour
 
     private Vector2 moveInput;
 
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+    }
+
     void Update()
     {
-
-        moveInput.x = Input.GetAxis("Horizontal");
-        moveInput.y = Input.GetAxis("Vertical");
-
-
+        moveInput.x = Input.GetAxisRaw("Horizontal");
+        moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
-
 
         if (moveInput.x > 0)
             spriteRenderer.flipX = false;
