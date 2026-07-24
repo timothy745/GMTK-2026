@@ -23,9 +23,9 @@ public class PlayerMovementIsometric : MonoBehaviour
         moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
 
-        if (moveInput.x > 0)
+        if (moveInput.x < 0)
             spriteRenderer.flipX = false;
-        else if (moveInput.x < 0)
+        else if (moveInput.x > 0)
             spriteRenderer.flipX = true;
 
         animator.SetFloat("MoveX", moveInput.x);
