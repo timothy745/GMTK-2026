@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public class MazeInteractable : MonoBehaviour
 {
@@ -6,14 +8,22 @@ public class MazeInteractable : MonoBehaviour
     [SerializeField] private float interactionRadius = 2f;
     [SerializeField] private KeyCode interactKey = KeyCode.E;
 
+    [Header("Prompt UI")]
+    [SerializeField] private Sprite interactSprite;
+    [SerializeField] private Vector2 promptSize = new Vector2(200f, 80f);
+
     public bool IsPlayerInRange { get; private set; }
     public bool IsLocked { get; set; }
 
     private CircleCollider2D triggerCollider;
+    private GameObject promptRoot;
+    private Image promptBg;
+    private TextMeshProUGUI promptText;
 
     void Awake()
     {
         SetupTriggerCollider();
+        CreatePromptUI();
     }
 
     void OnValidate()
@@ -24,6 +34,12 @@ public class MazeInteractable : MonoBehaviour
             col.radius = interactionRadius;
             col.isTrigger = true;
         }
+
+        if (promptBg != null && interactSprite != null)
+            promptBg.sprite = interactSprite;
+
+        if (promptRoot != null)
+            promptRoot.SetActive(false);
     }
 
     void Update()
@@ -39,14 +55,20 @@ public class MazeInteractable : MonoBehaviour
                 manager.OpenMaze();
             }
         }
+
+        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing)
+        {
+            promptRoot.SetActive(false);
+            return;
+        }
+
+        UpdatePromptPosition();
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
-        {
             IsPlayerInRange = true;
-        }
     }
 
     void OnTriggerExit2D(Collider2D other)
@@ -54,6 +76,8 @@ public class MazeInteractable : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             IsPlayerInRange = false;
+            if (promptRoot != null)
+                promptRoot.SetActive(false);
         }
     }
 
@@ -63,42 +87,80 @@ public class MazeInteractable : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, interactionRadius);
     }
 
-    void OnGUI()
+    void LateUpdate()
     {
-        if (MazeManager.IsAnyMazeActive) return;
-
-        if (IsLocked)
+        if (IsPlayerInRange && !IsLocked && !MazeManager.IsAnyMazeActive && !MazeManager.IsTipsShowing)
         {
-            Vector3 worldPos = transform.position + Vector3.up * 1.8f;
-            Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+            promptRoot.SetActive(true);
+            UpdatePromptPosition();
+        }
+        else
+        {
+            promptRoot.SetActive(false);
+        }
+    }
 
-            GUIStyle lockedStyle = new GUIStyle
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 14,
-                fontStyle = FontStyle.Bold
-            };
-            lockedStyle.normal.textColor = Color.red;
-            GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 15, 120, 25),
-                "[Locked]", lockedStyle);
-            return;
+    private void CreatePromptUI()
+    {
+        Canvas canvas = FindObjectOfType<Canvas>();
+        if (canvas == null)
+        {
+            GameObject canvasObj = new GameObject("InteractCanvas");
+            canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
         }
 
-        if (IsPlayerInRange)
-        {
-            Vector3 worldPos = transform.position + Vector3.up * 1.8f;
-            Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+        promptRoot = new GameObject("InteractPrompt");
+        promptRoot.transform.SetParent(canvas.transform, false);
 
-            GUIStyle promptStyle = new GUIStyle
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 14,
-                fontStyle = FontStyle.Bold
-            };
-            promptStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(screenPos.x - 60, Screen.height - screenPos.y - 15, 120, 25),
-                "[E] Open Maze", promptStyle);
+        RectTransform rootRect = promptRoot.AddComponent<RectTransform>();
+        rootRect.sizeDelta = promptSize;
+
+        if (interactSprite != null)
+        {
+            promptBg = promptRoot.AddComponent<Image>();
+            promptBg.sprite = interactSprite;
+            promptBg.type = Image.Type.Simple;
+            promptBg.preserveAspect = true;
+            promptBg.color = Color.white;
         }
+        else
+        {
+            promptBg = promptRoot.AddComponent<Image>();
+            promptBg.color = new Color(0f, 0f, 0f, 0.8f);
+        }
+
+        GameObject textObj = new GameObject("Text");
+        textObj.transform.SetParent(promptRoot.transform, false);
+
+        RectTransform textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        promptText = textObj.AddComponent<TextMeshProUGUI>();
+        promptText.text = "[E] Open Maze";
+        promptText.alignment = TextAlignmentOptions.Center;
+        promptText.fontSize = 20;
+        promptText.fontStyle = FontStyles.Bold;
+        promptText.color = Color.white;
+        promptText.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+
+        promptRoot.SetActive(false);
+    }
+
+    private void UpdatePromptPosition()
+    {
+        if (promptRoot == null) return;
+
+        Vector3 worldPos = transform.position + Vector3.up * 1.8f;
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
+
+        RectTransform rootRect = promptRoot.GetComponent<RectTransform>();
+        rootRect.position = new Vector3(screenPos.x, Screen.height - screenPos.y, 0f);
     }
 
     private void SetupTriggerCollider()
