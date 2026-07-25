@@ -6,11 +6,15 @@ public class MazeInteractable : MonoBehaviour
 {
     [Header("Interaction Settings")]
     [SerializeField] private float interactionRadius = 2f;
+    [SerializeField] private float interactionOffsetX = 0f;
+    [SerializeField] private float interactionOffsetY = 0f;
     [SerializeField] private KeyCode interactKey = KeyCode.E;
 
     [Header("Prompt UI")]
     [SerializeField] private Sprite interactSprite;
     [SerializeField] private Vector2 promptSize = new Vector2(200f, 80f);
+    [SerializeField] private float promptOffsetX = 0f;
+    [SerializeField] private float promptOffsetY = 1.8f;
 
     public bool IsPlayerInRange { get; private set; }
     public bool IsLocked { get; set; }
@@ -32,6 +36,7 @@ public class MazeInteractable : MonoBehaviour
         if (col != null)
         {
             col.radius = interactionRadius;
+            col.offset = new Vector2(interactionOffsetX, interactionOffsetY);
             col.isTrigger = true;
         }
 
@@ -84,7 +89,8 @@ public class MazeInteractable : MonoBehaviour
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, interactionRadius);
+        Vector3 center = transform.position + new Vector3(interactionOffsetX, interactionOffsetY, 0f);
+        Gizmos.DrawWireSphere(center, interactionRadius);
     }
 
     void LateUpdate()
@@ -156,7 +162,7 @@ public class MazeInteractable : MonoBehaviour
     {
         if (promptRoot == null) return;
 
-        Vector3 worldPos = transform.position + Vector3.up * 1.8f;
+        Vector3 worldPos = transform.position + new Vector3(promptOffsetX, promptOffsetY, 0f);
         Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
 
         RectTransform rootRect = promptRoot.GetComponent<RectTransform>();
@@ -171,5 +177,6 @@ public class MazeInteractable : MonoBehaviour
 
         triggerCollider.isTrigger = true;
         triggerCollider.radius = interactionRadius;
+        triggerCollider.offset = new Vector2(interactionOffsetX, interactionOffsetY);
     }
 }
