@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 
 public class ColorRenderer : MonoBehaviour
@@ -26,6 +27,7 @@ public class ColorRenderer : MonoBehaviour
     public int GridSize => gridSize;
     public Image[,] GridCells => gridCells;
     public RectTransform[] PaletteRects { get; private set; }
+    public RectTransform SubmitButtonRect { get; private set; }
 
     public void BuildGrid(Sprite referenceSprite, Color[] paletteColors, RectTransform container, Sprite tableSprite)
     {
@@ -40,7 +42,7 @@ public class ColorRenderer : MonoBehaviour
         colorContainer.anchorMax = new Vector2(0.5f, 0.5f);
         colorContainer.pivot = new Vector2(0.5f, 0.5f);
         colorContainer.anchoredPosition = Vector2.zero;
-        colorContainer.sizeDelta = new Vector2(1200f, 700f);
+        colorContainer.sizeDelta = new Vector2(1200f, 850f);
 
         CreateTableBackground(tableSprite);
         targetColors = ExtractTargetColors(referenceSprite);
@@ -98,7 +100,7 @@ public class ColorRenderer : MonoBehaviour
             for (int x = 0; x < gridSize; x++)
             {
                 float sampleX = rect.x + (x + 0.5f) / gridSize * rect.width;
-                float sampleY = rect.y + (y + 0.5f) / gridSize * rect.height;
+                float sampleY = rect.y + rect.height - (y + 0.5f) / gridSize * rect.height;
                 Color pixel = tex.GetPixel((int)sampleX, (int)sampleY);
                 colors[y * gridSize + x] = pixel;
             }
@@ -258,6 +260,56 @@ private void CreateGridLines(float startX, float startY)
             img.color = palette[i];
             img.raycastTarget = false;
 
+            // White border for the black color
+            if (IsBlack(palette[i]))
+            {
+                Outline outline = btn.AddComponent<Outline>();
+                outline.effectColor = Color.white;
+                outline.effectDistance = new Vector2(2f, -2f);
+            }
+
+            // Eraser icon for white color
+            if (palette[i] == Color.white)
+            {
+                GameObject eraserIcon = new GameObject("EraserIcon");
+                eraserIcon.transform.SetParent(btn.transform, false);
+
+                RectTransform iconRect = eraserIcon.AddComponent<RectTransform>();
+                iconRect.anchorMin = Vector2.zero;
+                iconRect.anchorMax = Vector2.one;
+                iconRect.offsetMin = Vector2.zero;
+                iconRect.offsetMax = Vector2.zero;
+
+                Image iconImg = eraserIcon.AddComponent<Image>();
+                iconImg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+                iconImg.raycastTarget = false;
+
+                // X mark
+                GameObject x1 = new GameObject("X1");
+                x1.transform.SetParent(eraserIcon.transform, false);
+                RectTransform x1Rect = x1.AddComponent<RectTransform>();
+                x1Rect.anchorMin = new Vector2(0.2f, 0.4f);
+                x1Rect.anchorMax = new Vector2(0.8f, 0.6f);
+                x1Rect.offsetMin = Vector2.zero;
+                x1Rect.offsetMax = Vector2.zero;
+                Image x1Img = x1.AddComponent<Image>();
+                x1Img.color = Color.white;
+                x1Img.raycastTarget = false;
+                x1Rect.localRotation = Quaternion.Euler(0, 0, 45f);
+
+                GameObject x2 = new GameObject("X2");
+                x2.transform.SetParent(eraserIcon.transform, false);
+                RectTransform x2Rect = x2.AddComponent<RectTransform>();
+                x2Rect.anchorMin = new Vector2(0.2f, 0.4f);
+                x2Rect.anchorMax = new Vector2(0.8f, 0.6f);
+                x2Rect.offsetMin = Vector2.zero;
+                x2Rect.offsetMax = Vector2.zero;
+                Image x2Img = x2.AddComponent<Image>();
+                x2Img.color = Color.white;
+                x2Img.raycastTarget = false;
+                x2Rect.localRotation = Quaternion.Euler(0, 0, -45f);
+            }
+
             paletteButtons[i] = img;
             PaletteRects[i] = rect;
             paletteRects[i] = rect;
@@ -365,17 +417,17 @@ private void CreateGridLines(float startX, float startY)
         if (selectedColorIndex < 0 || selectedColorIndex >= palette.Length) return;
 
         int idx = gridY * gridSize + gridX;
-        Color paintColor = palette[selectedColorIndex];
 
-        if (paintColor == Color.white)
+        if (selectedColorIndex == 0)
         {
-            currentColors[idx] = Color.clear;
+            currentColors[idx] = new Color(1f, 1f, 1f, 0f);
             gridCells[gridX, gridY].color = new Color(1f, 1f, 1f, 0f);
         }
         else
         {
-            currentColors[idx] = paintColor;
-            gridCells[gridX, gridY].color = paintColor;
+            Color paintColor = palette[selectedColorIndex];
+            currentColors[idx] = new Color(paintColor.r, paintColor.g, paintColor.b, 1f);
+            gridCells[gridX, gridY].color = currentColors[idx];
         }
     }
 
@@ -398,6 +450,68 @@ private void CreateGridLines(float startX, float startY)
 
         if (checkedCount == 0) return 1f;
         return (float)matchCount / checkedCount;
+    }
+
+    public List<Vector2Int> GetWrongPixels()
+    {
+        List<Vector2Int> wrong = new List<Vector2Int>();
+        if (targetColors == null || currentColors == null) return wrong;
+
+        for (int y = 0; y < gridSize; y++)
+        {
+            for (int x = 0; x < gridSize; x++)
+            {
+                int idx = y * gridSize + x;
+                if (IsBlack(targetColors[idx]) && !ColorClose(currentColors[idx], targetColors[idx]))
+                {
+                    wrong.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+        return wrong;
+    }
+
+    public IEnumerator FlashWrongPixels(List<Vector2Int> wrongPixels)
+    {
+        float flashDuration = 1.5f;
+        float flashSpeed = 8f;
+        float elapsed = 0f;
+
+        Color[] originalColors = new Color[wrongPixels.Count];
+        for (int i = 0; i < wrongPixels.Count; i++)
+        {
+            Vector2Int p = wrongPixels[i];
+            originalColors[i] = gridCells[p.x, p.y].color;
+        }
+
+        while (elapsed < flashDuration)
+        {
+            float t = Mathf.PingPong(elapsed * flashSpeed, 1f);
+            Color flashColor = Color.Lerp(Color.white, Color.yellow, t);
+
+            for (int i = 0; i < wrongPixels.Count; i++)
+            {
+                Vector2Int p = wrongPixels[i];
+                if (gridCells[p.x, p.y] != null)
+                {
+                    gridCells[p.x, p.y].color = flashColor;
+                    gridCells[p.x, p.y].SetAllDirty();
+                }
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        for (int i = 0; i < wrongPixels.Count; i++)
+        {
+            Vector2Int p = wrongPixels[i];
+            if (gridCells[p.x, p.y] != null)
+            {
+                gridCells[p.x, p.y].color = originalColors[i];
+                gridCells[p.x, p.y].SetAllDirty();
+            }
+        }
     }
 
     private bool IsBlack(Color c)

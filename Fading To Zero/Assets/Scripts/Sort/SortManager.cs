@@ -27,6 +27,7 @@ public class SortManager : MonoBehaviour
 
     [Header("Paper")]
     [SerializeField] private Sprite paperSprite;
+    [SerializeField] private float paperYPosition = -1.08f;
 
     [Header("Tips")]
     [SerializeField] private Sprite tipsSprite;
@@ -423,7 +424,10 @@ public class SortManager : MonoBehaviour
             paperRenderer = paperObject.GetComponent<SpriteRenderer>();
             if (paperRenderer != null && paperSprite != null)
                 paperRenderer.sprite = paperSprite;
-            paperBasePosition = paperRenderer.transform.localPosition;
+
+            Vector3 pos = paperRenderer.transform.localPosition;
+            pos.y = paperYPosition;
+            paperRenderer.transform.localPosition = pos;
         }
 
         if (playerDot != null)
@@ -454,7 +458,7 @@ public class SortManager : MonoBehaviour
         sortContainer.SetAsLastSibling();
     }
 
-    public void CloseSort()
+    public void CloseSort(bool fromFail = false)
     {
         sortActive = false;
         tipsShowing = false;
@@ -477,29 +481,37 @@ public class SortManager : MonoBehaviour
         if (mazeParticles != null)
             mazeParticles.SetActive(false);
 
-        ResetPaperVisuals();
-
-        if (paperObject != null)
+        if (!fromFail)
         {
-            if (paperRenderer != null && lockedSprite != null)
-            {
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else
-            {
-                paperObject.SetActive(false);
-            }
-        }
+            ResetPaperVisuals();
 
-        foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
+            if (paperObject != null)
+            {
+                if (paperRenderer != null && lockedSprite != null)
+                {
+                    paperRenderer.sprite = lockedSprite;
+                    paperRenderer.color = Color.white;
+                }
+                else
+                {
+                    paperObject.SetActive(false);
+                }
+            }
+
+            foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
+            {
+                if (sr != null && sr.gameObject != paperObject)
+                    sr.gameObject.SetActive(false);
+            }
+
+            paperObject = null;
+            paperRenderer = null;
+        }
+        else if (paperRenderer != null)
         {
-            if (sr != null && sr.gameObject != paperObject)
-                sr.gameObject.SetActive(false);
+            paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
         }
-
-        paperObject = null;
-        paperRenderer = null;
 
         if (maw != null)
             maw.ResetVisibility();
@@ -543,6 +555,7 @@ public class SortManager : MonoBehaviour
         if (sortContainer != null)
             sortContainer.gameObject.SetActive(false);
 
+        PlayCountdown(2, 1);
         StartCoroutine(ShatterPaper());
 
         Debug.Log("Sort completed! " + rewardName + " collected.");
@@ -553,20 +566,23 @@ public class SortManager : MonoBehaviour
         if (!sortActive) return;
         sortActive = false;
 
-        if (interactable != null)
-            interactable.IsLocked = true;
+        if (paperRenderer != null)
+        {
+            paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
+        }
 
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             sortContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
-                StartCoroutine(ShatterPaper());
+                CloseSort(true);
             });
         }
         else
         {
-            StartCoroutine(ShatterPaper());
+            CloseSort(true);
         }
     }
 
@@ -767,8 +783,6 @@ public class SortManager : MonoBehaviour
         }
     }
 
-    private Vector3 paperBasePosition;
-
     private void UpdatePaperEffects()
     {
         if (paperRenderer == null) return;
@@ -780,11 +794,8 @@ public class SortManager : MonoBehaviour
         float shakeAmount = urgency * 2f;
         float shakeSpeed = urgency * 25f;
         float rotZ = Mathf.Sin(Time.time * shakeSpeed) * shakeAmount;
-        float posX = Mathf.Sin(Time.time * shakeSpeed * 1.3f) * shakeAmount * 0.01f;
-        float posY = Mathf.Cos(Time.time * shakeSpeed * 0.7f) * shakeAmount * 0.005f;
 
         paperRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, rotZ);
-        paperRenderer.transform.localPosition = paperBasePosition + new Vector3(posX, posY, 0f);
     }
 
     private void UpdateTileColors()
@@ -962,5 +973,39 @@ public class SortManager : MonoBehaviour
         tex.SetPixels(pixels);
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void PlayCountdown(int from, int to)
+    {
+        GameObject canvasObj = new GameObject("SortCountdownCanvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 201;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        GameObject tmpObj = new GameObject("CountdownText");
+        tmpObj.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform rt = tmpObj.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(400f, 200f);
+
+        TextMeshProUGUI tmp = tmpObj.AddComponent<TextMeshProUGUI>();
+        tmp.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+        tmp.fontSize = 150f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        CountdownMotionBlur blur = tmpObj.AddComponent<CountdownMotionBlur>();
+        blur.StartCountdown(from, to);
+
+        Destroy(canvasObj, 8f);
     }
 }

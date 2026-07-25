@@ -20,6 +20,7 @@ public class SortRenderer : MonoBehaviour
     public List<RectTransform> ShapeRects => shapeRects;
     public List<int> ShapeType => shapeType;
     public Dictionary<int, int> ShapeToHole => shapeToHole;
+    public float MatchRadius => holeSize * 0.55f;
 
     public void BuildBoard(Sprite[] holeSprites, Sprite[] shapeSprites, RectTransform container, Sprite tableSprite)
     {

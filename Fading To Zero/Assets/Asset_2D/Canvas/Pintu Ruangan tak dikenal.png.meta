@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 0d548fa619a4977498a662dac9d8db36
+guid: 9805b7aae3fcef44abf7613d560024f5
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3050475511995209673
-    second: MazeTips_0
+      213: 6863125800814827997
+    second: Pintu Ruangan tak dikenal_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MazeTips_0
+      name: Pintu Ruangan tak dikenal_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1080
-        height: 1080
+        x: 519
+        y: 155
+        width: 219
+        height: 518
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 9c79088e057755a20800000000000000
-      internalID: 3050475511995209673
+      spriteID: dd9d26ead88be3f50800000000000000
+      internalID: 6863125800814827997
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MazeTips_0: 3050475511995209673
+      Pintu Ruangan tak dikenal_0: 6863125800814827997
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

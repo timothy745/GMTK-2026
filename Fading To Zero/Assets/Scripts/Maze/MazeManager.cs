@@ -22,6 +22,7 @@ public class MazeManager : MonoBehaviour
 
     [Header("Paper")]
     [SerializeField] private Sprite paperSprite;
+    [SerializeField] private float paperYPosition = -1.08f;
 
     [Header("Tips")]
     [SerializeField] private Sprite tipsSprite;
@@ -56,7 +57,6 @@ public class MazeManager : MonoBehaviour
     private float timeRemaining;
     private bool mazeActive;
     private Vector2Int exitPosition;
-
     public static bool IsAnyMazeActive { get; private set; }
     public static bool IsTipsShowing { get; private set; }
 
@@ -412,6 +412,10 @@ public class MazeManager : MonoBehaviour
             paperRenderer = paperObject.GetComponent<SpriteRenderer>();
             if (paperRenderer != null && paperSprite != null)
                 paperRenderer.sprite = paperSprite;
+
+            Vector3 pos = paperRenderer.transform.localPosition;
+            pos.y = paperYPosition;
+            paperRenderer.transform.localPosition = pos;
         }
 
         // Destroy old player dot if it exists
@@ -448,7 +452,7 @@ public class MazeManager : MonoBehaviour
             playerController.TrailContainer.SetAsLastSibling();
     }
 
-    public void CloseMaze()
+    public void CloseMaze(bool fromFail = false)
     {
         mazeActive = false;
         tipsShowing = false;
@@ -471,19 +475,27 @@ public class MazeManager : MonoBehaviour
         if (mazeParticles != null)
             mazeParticles.SetActive(false);
 
-        ResetPaperVisuals();
-
-        if (paperRenderer != null && lockedSprite != null)
+        if (!fromFail)
         {
-            paperRenderer.sprite = lockedSprite;
+            ResetPaperVisuals();
+
+            if (paperRenderer != null && lockedSprite != null)
+            {
+                paperRenderer.sprite = lockedSprite;
+                paperRenderer.color = Color.white;
+            }
+            else if (paperObject != null)
+            {
+                paperObject.SetActive(false);
+            }
+
+            paperRenderer = null;
+        }
+        else if (paperRenderer != null)
+        {
             paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
         }
-        else if (paperObject != null)
-        {
-            paperObject.SetActive(false);
-        }
-
-        paperRenderer = null;
 
         if (maw != null)
             maw.ResetVisibility();
@@ -515,6 +527,7 @@ public class MazeManager : MonoBehaviour
         if (mazeContainer != null)
             mazeContainer.gameObject.SetActive(false);
 
+        PlayCountdown(3, 2);
         StartCoroutine(ShatterPaper());
 
         Debug.Log("Maze completed! " + rewardName + " collected.");
@@ -525,20 +538,23 @@ public class MazeManager : MonoBehaviour
         if (!mazeActive) return;
         mazeActive = false;
 
-        if (interactable != null)
-            interactable.IsLocked = true;
+        if (paperRenderer != null)
+        {
+            paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
+        }
 
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             mazeContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
-                StartCoroutine(ShatterPaper());
+                CloseMaze(true);
             });
         }
         else
         {
-            StartCoroutine(ShatterPaper());
+            CloseMaze(true);
         }
     }
 
@@ -583,11 +599,8 @@ public class MazeManager : MonoBehaviour
         float shakeAmount = urgency * 2f;
         float shakeSpeed = urgency * 25f;
         float rotZ = Mathf.Sin(Time.time * shakeSpeed) * shakeAmount;
-        float posX = Mathf.Sin(Time.time * shakeSpeed * 1.3f) * shakeAmount * 0.01f;
-        float posY = Mathf.Cos(Time.time * shakeSpeed * 0.7f) * shakeAmount * 0.005f;
 
         paperRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, rotZ);
-        paperRenderer.transform.localPosition += new Vector3(posX, posY, 0f);
     }
 
     private void UpdateTileColors()
@@ -772,5 +785,39 @@ public class MazeManager : MonoBehaviour
         tex.SetPixels(pixels);
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void PlayCountdown(int from, int to)
+    {
+        GameObject canvasObj = new GameObject("MazeCountdownCanvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 201;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        GameObject tmpObj = new GameObject("CountdownText");
+        tmpObj.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform rt = tmpObj.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(400f, 200f);
+
+        TextMeshProUGUI tmp = tmpObj.AddComponent<TextMeshProUGUI>();
+        tmp.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+        tmp.fontSize = 150f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        CountdownMotionBlur blur = tmpObj.AddComponent<CountdownMotionBlur>();
+        blur.StartCountdown(from, to);
+
+        Destroy(canvasObj, 8f);
     }
 }

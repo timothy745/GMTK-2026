@@ -43,6 +43,14 @@ public class ColorPlayerController : MonoBehaviour
                 }
             }
 
+            if (colorManager.SubmitButtonRect != null &&
+                RectTransformUtility.RectangleContainsScreenPoint(colorManager.SubmitButtonRect, mousePos, null))
+            {
+                colorManager.OnSubmitClicked();
+                wasPainting = false;
+                return;
+            }
+
             PaintAtPosition(mousePos);
             wasPainting = true;
             return;
@@ -69,7 +77,6 @@ public class ColorPlayerController : MonoBehaviour
                 if (RectTransformUtility.RectangleContainsScreenPoint(cell.rectTransform, mousePos, null))
                 {
                     colorRenderer.PaintCell(x, y);
-                    colorManager.CheckWinCondition();
                     return;
                 }
             }
