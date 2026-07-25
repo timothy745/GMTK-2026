@@ -27,6 +27,14 @@ public class MazeRenderer : MonoBehaviour
         mazeContainer.pivot = new Vector2(0.5f, 0.5f);
         mazeContainer.anchoredPosition = Vector2.zero;
 
+        // Scale cell size to fit within the screen
+        Canvas canvas = mazeContainer.GetComponentInParent<Canvas>();
+        float maxW = canvas.pixelRect.width * 0.85f;
+        float maxH = canvas.pixelRect.height * 0.85f;
+        float fitW = maxW / mazeWidth;
+        float fitH = maxH / mazeHeight;
+        cellSize = Mathf.Min(fitW, fitH, 48f);
+
         float totalWidth = mazeWidth * cellSize;
         float totalHeight = mazeHeight * cellSize;
         mazeContainer.sizeDelta = new Vector2(totalWidth + wallThickness, totalHeight + wallThickness);

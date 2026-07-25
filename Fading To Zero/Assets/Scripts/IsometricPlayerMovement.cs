@@ -19,6 +19,13 @@ public class PlayerMovementIsometric : MonoBehaviour
 
     void Update()
     {
+        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
+        {
+            moveInput = Vector2.zero;
+            animator.SetFloat("Speed", 0f);
+            return;
+        }
+
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
@@ -35,6 +42,7 @@ public class PlayerMovementIsometric : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
         rb.linearVelocity = moveInput * moveSpeed;
     }
 }

@@ -293,6 +293,23 @@ public class MazeManager : MonoBehaviour
             }
         }
 
+        // Ensure tips overlay has a clickable button even if it was pre-created
+        if (tipsOverlay != null)
+        {
+            if (tipsImage == null)
+                tipsImage = tipsOverlay.GetComponent<Image>();
+            if (tipsImage != null)
+                tipsImage.raycastTarget = true;
+
+            if (tipsOverlay.GetComponent<Button>() == null)
+            {
+                Button tipsBtn = tipsOverlay.AddComponent<Button>();
+                tipsBtn.targetGraphic = tipsImage;
+                tipsBtn.transition = Selectable.Transition.None;
+                tipsBtn.onClick.AddListener(OnTipsClicked);
+            }
+        }
+
         if (tipsOverlay != null)
             tipsOverlay.SetActive(false);
 
