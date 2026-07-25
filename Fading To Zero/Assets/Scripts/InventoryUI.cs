@@ -55,6 +55,57 @@ public class InventoryUI : MonoBehaviour
     {
         collectedItems.Add(new InventoryItem { sprite = sprite, itemName = itemName });
         StartCoroutine(ShowPickupPopup(sprite, itemName));
+        TryPlayPhotoPieceAnimation(itemName);
+    }
+
+    private void TryPlayPhotoPieceAnimation(string itemName)
+    {
+        if (itemName.Contains("PhotoPiece_1"))
+            PlayPhotoPieceCountdown(3, 2);
+        else if (itemName.Contains("PhotoPiece_2"))
+            PlayPhotoPieceCountdown(2, 1);
+        else if (itemName.Contains("PhotoPiece_3"))
+            PlayPhotoPieceCountdown(1, 0);
+    }
+
+    private void PlayPhotoPieceCountdown(int from, int to)
+    {
+        Canvas canvas = CreateOverlayCanvas("PhotoPieceCountdownCanvas", 201);
+
+        GameObject tmpObj = new GameObject("CountdownText");
+        tmpObj.transform.SetParent(canvas.transform, false);
+
+        RectTransform rt = tmpObj.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(400f, 200f);
+
+        TextMeshProUGUI tmp = tmpObj.AddComponent<TextMeshProUGUI>();
+        tmp.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+        tmp.fontSize = 150f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        CountdownMotionBlur blur = tmpObj.AddComponent<CountdownMotionBlur>();
+        blur.StartCountdown(from, to);
+
+        Destroy(canvas.gameObject, 8f);
+    }
+
+    private Canvas CreateOverlayCanvas(string name, int sortOrder)
+    {
+        GameObject obj = new GameObject(name);
+        Canvas canvas = obj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = sortOrder;
+
+        CanvasScaler scaler = obj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        obj.AddComponent<GraphicRaycaster>();
+        return canvas;
     }
 
     private IEnumerator ShowPickupPopup(Sprite sprite, string itemName)

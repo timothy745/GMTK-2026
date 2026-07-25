@@ -96,7 +96,7 @@ public class SortPlayerController : MonoBehaviour
         for (int i = 0; i < holePositions.Length; i++)
         {
             float dist = Vector2.Distance(localPos + dragOffset, holePositions[i]);
-            sortRenderer.SetHoleGlow(i, dist < 120f);
+            sortRenderer.SetHoleGlow(i, dist < sortRenderer.MatchRadius);
         }
     }
 
@@ -112,7 +112,7 @@ public class SortPlayerController : MonoBehaviour
         for (int i = 0; i < holePositions.Length; i++)
         {
             float dist = Vector2.Distance(shapePos, holePositions[i]);
-            if (dist < 120f && dist < closestDist)
+            if (dist < sortRenderer.MatchRadius && dist < closestDist)
             {
                 closestDist = dist;
                 closestHole = i;

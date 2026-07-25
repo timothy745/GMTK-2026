@@ -41,6 +41,7 @@ public class ColorManager : MonoBehaviour
 
     [Header("Paper")]
     [SerializeField] private Sprite paperSprite;
+    [SerializeField] private float paperYPosition = -1.08f;
 
     [Header("Tips")]
     [SerializeField] private Sprite tipsSprite;
@@ -73,6 +74,8 @@ public class ColorManager : MonoBehaviour
 
     private float timeRemaining;
     private bool colorActive;
+
+    public RectTransform SubmitButtonRect { get; private set; }
 
     public static bool IsAnyColorActive { get; private set; }
     public static bool IsTipsShowing { get; private set; }
@@ -116,6 +119,12 @@ public class ColorManager : MonoBehaviour
             ResetColoring();
         }
 
+        if (Keyboard.current != null && (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.numpadEnterKey.wasPressedThisFrame))
+        {
+            OnSubmitClicked();
+        }
+
+
         if (timeRemaining <= 0f)
         {
             timeRemaining = 0f;
@@ -138,6 +147,19 @@ public class ColorManager : MonoBehaviour
             scaler.matchWidthOrHeight = 0.5f;
 
             canvasObj.AddComponent<GraphicRaycaster>();
+        }
+
+        // Ensure EventSystem exists with InputSystemUIInputModule
+        var eventSystem = FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
+        if (eventSystem == null)
+        {
+            GameObject es = new GameObject("EventSystem");
+            eventSystem = es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
+        else if (eventSystem.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>() == null)
+        {
+            eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
 
         colorCanvas.gameObject.SetActive(false);
@@ -422,7 +444,10 @@ public class ColorManager : MonoBehaviour
             paperRenderer = paperObject.GetComponent<SpriteRenderer>();
             if (paperRenderer != null && paperSprite != null)
                 paperRenderer.sprite = paperSprite;
-            paperBasePosition = paperRenderer.transform.localPosition;
+
+            Vector3 pos = paperRenderer.transform.localPosition;
+            pos.y = paperYPosition;
+            paperRenderer.transform.localPosition = pos;
         }
 
         if (playerDot != null)
@@ -456,50 +481,54 @@ public class ColorManager : MonoBehaviour
     }
 
     private void CreateSubmitButton()
-    {
-        GameObject btnObj = new GameObject("SubmitButton");
-        btnObj.transform.SetParent(colorContainer, false);
+{
+    GameObject btnObj = new GameObject("SubmitButton");
+    btnObj.transform.SetParent(colorContainer, false);
 
-        RectTransform btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-        btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRect.pivot = new Vector2(0.5f, 0.5f);
-        btnRect.anchoredPosition = new Vector2(0f, -340f);
-        btnRect.sizeDelta = new Vector2(180f, 50f);
+    RectTransform btnRect = btnObj.AddComponent<RectTransform>();
+    btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+    btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+    btnRect.pivot = new Vector2(0.5f, 0.5f);
+    btnRect.anchoredPosition = new Vector2(0f, -340f);
+    btnRect.sizeDelta = new Vector2(180f, 50f);
 
-        Image btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = new Color(0.2f, 0.7f, 0.3f);
+    SubmitButtonRect = btnRect;
 
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        btn.onClick.AddListener(OnSubmitClicked);
+    Image btnImg = btnObj.AddComponent<Image>();
+    btnImg.color = new Color(0.2f, 0.7f, 0.3f);
+    btnImg.raycastTarget = true; // Ensure raycasting is on
 
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
+    // --- ADD standard Unity Button component ---
+    Button btn = btnObj.AddComponent<Button>();
+    btn.targetGraphic = btnImg;
+    btn.onClick.AddListener(OnSubmitClicked);
 
-        RectTransform textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
+    GameObject textObj = new GameObject("Text");
+    textObj.transform.SetParent(btnObj.transform, false);
 
-        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = 24;
-        text.fontStyle = FontStyles.Bold;
-        text.color = Color.white;
-        text.text = "SUBMIT";
-        text.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
-        text.raycastTarget = false;
-    }
+    RectTransform textRect = textObj.AddComponent<RectTransform>();
+    textRect.anchorMin = Vector2.zero;
+    textRect.anchorMax = Vector2.one;
+    textRect.offsetMin = Vector2.zero;
+    textRect.offsetMax = Vector2.zero;
 
-    private void OnSubmitClicked()
+    TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
+    text.alignment = TextAlignmentOptions.Center;
+    text.fontSize = 24;
+    text.fontStyle = FontStyles.Bold;
+    text.color = Color.white;
+    text.text = "SUBMIT";
+    text.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+    text.raycastTarget = false; // Disable on text to prevent blocking
+}
+
+    public void OnSubmitClicked()
     {
         if (!colorActive) return;
         CheckWinCondition();
     }
 
-    public void CloseColoring()
+    public void CloseColoring(bool fromFail = false)
     {
         colorActive = false;
         tipsShowing = false;
@@ -511,7 +540,11 @@ public class ColorManager : MonoBehaviour
             tipsOverlay.SetActive(false);
 
         if (playerController != null)
+        {
             playerController.Deactivate();
+            Destroy(playerController);
+            playerController = null;
+        }
 
         if (playerDot != null)
         {
@@ -522,29 +555,37 @@ public class ColorManager : MonoBehaviour
         if (mazeParticles != null)
             mazeParticles.SetActive(false);
 
-        ResetPaperVisuals();
-
-        if (paperObject != null)
+        if (!fromFail)
         {
-            if (paperRenderer != null && lockedSprite != null)
-            {
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else
-            {
-                paperObject.SetActive(false);
-            }
-        }
+            ResetPaperVisuals();
 
-        foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
+            if (paperObject != null)
+            {
+                if (paperRenderer != null && lockedSprite != null)
+                {
+                    paperRenderer.sprite = lockedSprite;
+                    paperRenderer.color = Color.white;
+                }
+                else
+                {
+                    paperObject.SetActive(false);
+                }
+            }
+
+            foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
+            {
+                if (sr != null && sr.gameObject != paperObject)
+                    sr.gameObject.SetActive(false);
+            }
+
+            paperObject = null;
+            paperRenderer = null;
+        }
+        else if (paperRenderer != null)
         {
-            if (sr != null && sr.gameObject != paperObject)
-                sr.gameObject.SetActive(false);
+            paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
         }
-
-        paperObject = null;
-        paperRenderer = null;
 
         if (maw != null)
             maw.ResetVisibility();
@@ -568,15 +609,41 @@ public class ColorManager : MonoBehaviour
         playerController.Initialize(colorRenderer, this);
     }
 
+    private bool isChecking;
+
     public void CheckWinCondition()
     {
         if (!colorActive) return;
+        if (isChecking) return;
 
         float match = colorRenderer.GetMatchPercentage();
 
         if (match >= matchThreshold)
         {
             ColoringCompleted();
+        }
+        else
+        {
+            StartCoroutine(FailedSubmit());
+        }
+    }
+
+    private System.Collections.IEnumerator FailedSubmit()
+    {
+        isChecking = true;
+
+        timeRemaining -= 4f;
+        if (timeRemaining < 0f) timeRemaining = 0f;
+
+        List<Vector2Int> wrongPixels = colorRenderer.GetWrongPixels();
+        yield return colorRenderer.FlashWrongPixels(wrongPixels);
+
+        isChecking = false;
+
+        if (timeRemaining <= 0f)
+        {
+            timeRemaining = 0f;
+            FailColoring();
         }
     }
 
@@ -600,6 +667,7 @@ public class ColorManager : MonoBehaviour
         if (colorContainer != null)
             colorContainer.gameObject.SetActive(false);
 
+        PlayCountdown(1, 0);
         StartCoroutine(ShatterPaper());
 
         Debug.Log("Coloring completed! " + rewardName + " collected.");
@@ -610,20 +678,23 @@ public class ColorManager : MonoBehaviour
         if (!colorActive) return;
         colorActive = false;
 
-        if (interactable != null)
-            interactable.IsLocked = true;
+        if (paperRenderer != null)
+        {
+            paperRenderer.color = Color.white;
+            paperRenderer.transform.localRotation = Quaternion.identity;
+        }
 
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             colorContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
-                StartCoroutine(ShatterPaper());
+                CloseColoring(true);
             });
         }
         else
         {
-            StartCoroutine(ShatterPaper());
+            CloseColoring(true);
         }
     }
 
@@ -650,8 +721,6 @@ public class ColorManager : MonoBehaviour
         }
     }
 
-    private Vector3 paperBasePosition;
-
     private void UpdatePaperEffects()
     {
         if (paperRenderer == null) return;
@@ -663,11 +732,8 @@ public class ColorManager : MonoBehaviour
         float shakeAmount = urgency * 2f;
         float shakeSpeed = urgency * 25f;
         float rotZ = Mathf.Sin(Time.time * shakeSpeed) * shakeAmount;
-        float posX = Mathf.Sin(Time.time * shakeSpeed * 1.3f) * shakeAmount * 0.01f;
-        float posY = Mathf.Cos(Time.time * shakeSpeed * 0.7f) * shakeAmount * 0.005f;
 
         paperRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, rotZ);
-        paperRenderer.transform.localPosition = paperBasePosition + new Vector3(posX, posY, 0f);
     }
 
     private void ResetPaperVisuals()
@@ -832,5 +898,39 @@ public class ColorManager : MonoBehaviour
         tex.SetPixels(pixels);
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void PlayCountdown(int from, int to)
+    {
+        GameObject canvasObj = new GameObject("ColorCountdownCanvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 201;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        GameObject tmpObj = new GameObject("CountdownText");
+        tmpObj.transform.SetParent(canvasObj.transform, false);
+
+        RectTransform rt = tmpObj.AddComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(400f, 200f);
+
+        TextMeshProUGUI tmp = tmpObj.AddComponent<TextMeshProUGUI>();
+        tmp.font = Resources.Load<TMP_FontAsset>("LiberationSans SDF");
+        tmp.fontSize = 150f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        CountdownMotionBlur blur = tmpObj.AddComponent<CountdownMotionBlur>();
+        blur.StartCountdown(from, to);
+
+        Destroy(canvasObj, 8f);
     }
 }
