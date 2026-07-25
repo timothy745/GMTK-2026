@@ -31,7 +31,7 @@ public class InventoryUI : MonoBehaviour
 
     void Update()
     {
-        if (MazeManager.IsAnyMazeActive) return;
+        if (MazeManager.IsAnyMazeActive || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive) return;
 
         if (Input.GetKeyDown(KeyCode.B))
         {
@@ -41,7 +41,7 @@ public class InventoryUI : MonoBehaviour
 
     public void ToggleInventory()
     {
-        if (MazeManager.IsAnyMazeActive) return;
+        if (MazeManager.IsAnyMazeActive || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive) return;
 
         isOpen = !isOpen;
         IsOpen = isOpen;
@@ -59,14 +59,26 @@ public class InventoryUI : MonoBehaviour
 
     private IEnumerator ShowPickupPopup(Sprite sprite, string itemName)
     {
+        GameObject popupCanvasObj = new GameObject("PopupCanvas");
+        Canvas popupCanvas = popupCanvasObj.AddComponent<Canvas>();
+        popupCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        popupCanvas.sortingOrder = 110;
+
+        CanvasScaler popupScaler = popupCanvasObj.AddComponent<CanvasScaler>();
+        popupScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        popupScaler.referenceResolution = new Vector2(1920, 1080);
+        popupScaler.matchWidthOrHeight = 0.5f;
+
+        popupCanvasObj.AddComponent<GraphicRaycaster>();
+
         GameObject popup = new GameObject("PickupPopup");
-        popup.transform.SetParent(inventoryCanvas.transform, false);
+        popup.transform.SetParent(popupCanvasObj.transform, false);
 
         RectTransform popupRect = popup.AddComponent<RectTransform>();
         popupRect.anchorMin = new Vector2(0.5f, 0.5f);
         popupRect.anchorMax = new Vector2(0.5f, 0.5f);
         popupRect.pivot = new Vector2(0.5f, 0.5f);
-        popupRect.anchoredPosition = new Vector2(0f, -300f);
+        popupRect.anchoredPosition = new Vector2(0f, -80f);
         popupRect.sizeDelta = new Vector2(400f, 120f);
 
         Image popupBg = popup.AddComponent<Image>();
@@ -125,7 +137,7 @@ public class InventoryUI : MonoBehaviour
             yield return null;
         }
 
-        Destroy(popup);
+        Destroy(popupCanvasObj);
     }
 
     private Sprite CreateCircleSprite(int resolution)

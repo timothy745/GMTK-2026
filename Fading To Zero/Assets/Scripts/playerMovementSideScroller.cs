@@ -22,7 +22,7 @@ public class SideScrollerPlayer : MonoBehaviour
 
     void Update()
     {
-        if (MazeManager.IsAnyMazeActive || InventoryUI.IsOpen)
+        if (MazeManager.IsAnyMazeActive || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
         {
             moveInput = 0f;
             animator.SetFloat("Speed", 0f);
@@ -49,7 +49,7 @@ public class SideScrollerPlayer : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (MazeManager.IsAnyMazeActive || InventoryUI.IsOpen) return;
+        if (MazeManager.IsAnyMazeActive || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
         rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
     }
 }

@@ -6,7 +6,7 @@ public class MazeParticles : MonoBehaviour
 {
     [Header("Particle Settings")]
     [SerializeField] private int particleCount = 40;
-    [SerializeField] private float moveSpeed = 4000f;
+    [SerializeField] private float moveSpeed = 1500f;
     [SerializeField] private Sprite particleSprite;
 
     private List<ParticleData> particles = new List<ParticleData>();
