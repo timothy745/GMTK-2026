@@ -6,6 +6,8 @@ public class MazeMaw : MonoBehaviour
 {
     private Image mawImage;
     private RectTransform mawRect;
+    private AudioSource sfxSource;
+    private AudioClip screamClip;
 
     public void Setup(Canvas canvas, Sprite sprite)
     {
@@ -46,9 +48,10 @@ public class MazeMaw : MonoBehaviour
         mawImage.color = c;
     }
 
-    public Coroutine PlayJumpscare(Sprite maw2, Sprite maw3, System.Action onSequenceDone)
+    public void PlayJumpscare(Sprite maw2, Sprite maw3, System.Action onSequenceDone, AudioClip scream = null)
     {
-        return StartCoroutine(JumpscareSequence(maw2, maw3, onSequenceDone));
+        screamClip = scream;
+        StartCoroutine(JumpscareSequence(maw2, maw3, onSequenceDone));
     }
 
     private IEnumerator JumpscareSequence(Sprite maw2, Sprite maw3, System.Action onSequenceDone)
@@ -85,6 +88,17 @@ public class MazeMaw : MonoBehaviour
             cam.transform.position = originalCamPos;
 
         ResetVisibility();
+
+        if (screamClip != null)
+        {
+            if (sfxSource == null)
+            {
+                sfxSource = gameObject.AddComponent<AudioSource>();
+                sfxSource.playOnAwake = false;
+            }
+            sfxSource.PlayOneShot(screamClip);
+        }
+
         onSequenceDone?.Invoke();
     }
 

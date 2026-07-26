@@ -40,8 +40,12 @@ public class MazeManager : MonoBehaviour
     [SerializeField] private Sprite rewardSprite;
     [SerializeField] private string rewardName = "Photo Piece";
 
-    [Header("Locked")]
-    [SerializeField] private Sprite lockedSprite;
+    [Header("Audio")]
+    [SerializeField] private AudioClip clockTickClip;
+    [SerializeField] private AudioClip screamClip;
+
+    [Header("Dialog")]
+    [SerializeField] private MinigameDialog minigameDialog;
 
     private MazeGenerator generator;
     private MazeRenderer mazeRenderer;
@@ -57,6 +61,8 @@ public class MazeManager : MonoBehaviour
     private float timeRemaining;
     private bool mazeActive;
     private Vector2Int exitPosition;
+    private int lastDisplayedSecond;
+    private AudioSource sfxSource;
     public static bool IsAnyMazeActive { get; private set; }
     public static bool IsTipsShowing { get; private set; }
 
@@ -73,6 +79,9 @@ public class MazeManager : MonoBehaviour
         interactable = GetComponent<MazeInteractable>();
         if (interactable == null)
             interactable = gameObject.AddComponent<MazeInteractable>();
+
+        sfxSource = gameObject.AddComponent<AudioSource>();
+        sfxSource.playOnAwake = false;
 
         EnsureCanvasSetup();
     }
@@ -399,6 +408,8 @@ public class MazeManager : MonoBehaviour
         timeRemaining = timeLimit;
         mazeActive = true;
         IsAnyMazeActive = true;
+        lastDisplayedSecond = Mathf.CeilToInt(timeLimit);
+        BGMManager.PauseBGM();
 
         MazeGenerator.Cell[,] grid = generator.GenerateMaze(mazeWidth, mazeHeight);
         mazeRenderer.BuildMaze(grid, mazeContainer, mazeWidth, mazeHeight);
@@ -459,6 +470,9 @@ public class MazeManager : MonoBehaviour
         IsTipsShowing = false;
         IsAnyMazeActive = false;
         mazeCanvas.gameObject.SetActive(false);
+        BGMManager.ResumeBGM();
+
+        if (sfxSource != null) sfxSource.Stop();
 
         if (tipsOverlay != null)
             tipsOverlay.SetActive(false);
@@ -478,16 +492,7 @@ public class MazeManager : MonoBehaviour
         if (!fromFail)
         {
             ResetPaperVisuals();
-
-            if (paperRenderer != null && lockedSprite != null)
-            {
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else if (paperObject != null)
-            {
-                paperObject.SetActive(false);
-            }
+            if (mazeContainer != null) mazeContainer.anchoredPosition = Vector2.zero;
 
             paperRenderer = null;
         }
@@ -527,6 +532,11 @@ public class MazeManager : MonoBehaviour
         if (mazeContainer != null)
             mazeContainer.gameObject.SetActive(false);
 
+        BGMManager.ResumeBGM();
+
+        if (minigameDialog != null)
+            minigameDialog.ShowWinDialog();
+
         PlayCountdown(3, 2);
         StartCoroutine(ShatterPaper());
 
@@ -544,17 +554,23 @@ public class MazeManager : MonoBehaviour
             paperRenderer.transform.localRotation = Quaternion.identity;
         }
 
+        BGMManager.ResumeBGM();
+
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             mazeContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
                 CloseMaze(true);
-            });
+                if (minigameDialog != null)
+                    minigameDialog.ShowFailDialog();
+            }, screamClip);
         }
         else
         {
             CloseMaze(true);
+            if (minigameDialog != null)
+                minigameDialog.ShowFailDialog();
         }
     }
 
@@ -576,6 +592,16 @@ public class MazeManager : MonoBehaviour
 
         int seconds = Mathf.CeilToInt(timeRemaining);
         timerText.text = seconds + "s";
+
+        if (seconds != lastDisplayedSecond)
+        {
+            lastDisplayedSecond = seconds;
+            if (clockTickClip != null)
+            {
+                sfxSource.Stop();
+                sfxSource.PlayOneShot(clockTickClip);
+            }
+        }
 
         if (timeRemaining <= 10f)
         {
@@ -625,6 +651,9 @@ public class MazeManager : MonoBehaviour
         if (paperRenderer == null) return;
         paperRenderer.color = Color.white;
         paperRenderer.transform.localRotation = Quaternion.identity;
+        Vector3 pos = paperRenderer.transform.localPosition;
+        pos.y = paperYPosition;
+        paperRenderer.transform.localPosition = pos;
     }
 
     private void UpdateMawVisibility()
@@ -724,17 +753,8 @@ public class MazeManager : MonoBehaviour
 
         if (paperRenderer != null)
         {
-            if (lockedSprite != null)
-            {
-                paperRenderer.gameObject.SetActive(true);
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else
-            {
-                paperRenderer.gameObject.SetActive(false);
-                paperRenderer = null;
-            }
+            paperRenderer.gameObject.SetActive(false);
+            paperRenderer = null;
         }
 
         CloseMaze();

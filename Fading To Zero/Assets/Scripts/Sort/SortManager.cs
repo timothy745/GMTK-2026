@@ -45,12 +45,16 @@ public class SortManager : MonoBehaviour
     [SerializeField] private Sprite rewardSprite;
     [SerializeField] private string rewardName = "Photo Piece";
 
-    [Header("Locked")]
-    [SerializeField] private Sprite lockedSprite;
-
     [Header("Tentacle")]
     [SerializeField] private Sprite tentacleSprite;
     [SerializeField] private float tentacleCreepDuration = 5f;
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip clockTickClip;
+    [SerializeField] private AudioClip screamClip;
+
+    [Header("Dialog")]
+    [SerializeField] private MinigameDialog minigameDialog;
 
     private SortRenderer sortRenderer;
     private SortPlayerController playerController;
@@ -65,6 +69,8 @@ public class SortManager : MonoBehaviour
     private float timeRemaining;
     private bool sortActive;
     private float knockOutTimer;
+    private int lastDisplayedSecond;
+    private AudioSource sfxSource;
 
     public static bool IsAnySortActive { get; private set; }
     public static bool IsTipsShowing { get; private set; }
@@ -78,6 +84,9 @@ public class SortManager : MonoBehaviour
         interactable = GetComponent<SortInteractable>();
         if (interactable == null)
             interactable = gameObject.AddComponent<SortInteractable>();
+
+        sfxSource = gameObject.AddComponent<AudioSource>();
+        sfxSource.playOnAwake = false;
 
         EnsureCanvasSetup();
     }
@@ -386,6 +395,8 @@ public class SortManager : MonoBehaviour
         sortActive = true;
         IsAnySortActive = true;
         knockOutTimer = knockOutInterval;
+        lastDisplayedSecond = Mathf.CeilToInt(timeLimit);
+        BGMManager.PauseBGM();
 
         sortRenderer.BuildBoard(holeSprites, shapeSprites, sortContainer, tableSprite);
         sortContainer.SetAsLastSibling();
@@ -465,6 +476,9 @@ public class SortManager : MonoBehaviour
         IsTipsShowing = false;
         IsAnySortActive = false;
         sortCanvas.gameObject.SetActive(false);
+        BGMManager.ResumeBGM();
+
+        if (sfxSource != null) sfxSource.Stop();
 
         if (tipsOverlay != null)
             tipsOverlay.SetActive(false);
@@ -484,19 +498,7 @@ public class SortManager : MonoBehaviour
         if (!fromFail)
         {
             ResetPaperVisuals();
-
-            if (paperObject != null)
-            {
-                if (paperRenderer != null && lockedSprite != null)
-                {
-                    paperRenderer.sprite = lockedSprite;
-                    paperRenderer.color = Color.white;
-                }
-                else
-                {
-                    paperObject.SetActive(false);
-                }
-            }
+            if (sortContainer != null) sortContainer.anchoredPosition = Vector2.zero;
 
             foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
             {
@@ -555,6 +557,11 @@ public class SortManager : MonoBehaviour
         if (sortContainer != null)
             sortContainer.gameObject.SetActive(false);
 
+        BGMManager.ResumeBGM();
+
+        if (minigameDialog != null)
+            minigameDialog.ShowWinDialog();
+
         PlayCountdown(2, 1);
         StartCoroutine(ShatterPaper());
 
@@ -572,17 +579,23 @@ public class SortManager : MonoBehaviour
             paperRenderer.transform.localRotation = Quaternion.identity;
         }
 
+        BGMManager.ResumeBGM();
+
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             sortContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
                 CloseSort(true);
-            });
+                if (minigameDialog != null)
+                    minigameDialog.ShowFailDialog();
+            }, screamClip);
         }
         else
         {
             CloseSort(true);
+            if (minigameDialog != null)
+                minigameDialog.ShowFailDialog();
         }
     }
 
@@ -772,6 +785,16 @@ public class SortManager : MonoBehaviour
         int seconds = Mathf.CeilToInt(timeRemaining);
         timerText.text = seconds + "s";
 
+        if (seconds != lastDisplayedSecond)
+        {
+            lastDisplayedSecond = seconds;
+            if (clockTickClip != null)
+            {
+                sfxSource.Stop();
+                sfxSource.PlayOneShot(clockTickClip);
+            }
+        }
+
         if (timeRemaining <= 10f)
         {
             float flash = Mathf.PingPong(Time.time * 4f, 1f);
@@ -912,17 +935,8 @@ public class SortManager : MonoBehaviour
 
         if (paperRenderer != null)
         {
-            if (lockedSprite != null)
-            {
-                paperRenderer.gameObject.SetActive(true);
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else
-            {
-                paperRenderer.gameObject.SetActive(false);
-                paperRenderer = null;
-            }
+            paperRenderer.gameObject.SetActive(false);
+            paperRenderer = null;
         }
 
         CloseSort();

@@ -9,6 +9,18 @@ public class PlayerMovementIsometric : MonoBehaviour
     private SpriteRenderer spriteRenderer;
 
     private Vector2 moveInput;
+    private bool movementEnabled = true;
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
+        if (!enabled)
+        {
+            moveInput = Vector2.zero;
+            rb.linearVelocity = Vector2.zero;
+            animator.SetFloat("Speed", 0f);
+        }
+    }
 
     void Awake()
     {
@@ -19,8 +31,12 @@ public class PlayerMovementIsometric : MonoBehaviour
 
     void Update()
     {
-        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
+        if (!movementEnabled || MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
         {
+            if (movementEnabled)
+            {
+                Debug.Log($"[MOVE BLOCKED] movementEnabled={movementEnabled} maze={MazeManager.IsAnyMazeActive} mazeTips={MazeManager.IsTipsShowing} sort={SortManager.IsAnySortActive} color={ColorManager.IsAnyColorActive} inv={InventoryUI.IsOpen}");
+            }
             moveInput = Vector2.zero;
             animator.SetFloat("Speed", 0f);
             return;
@@ -42,7 +58,7 @@ public class PlayerMovementIsometric : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
+        if (!movementEnabled || MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
         rb.linearVelocity = moveInput * moveSpeed;
     }
 }
