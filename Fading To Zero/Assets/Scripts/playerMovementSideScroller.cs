@@ -12,6 +12,18 @@ public class SideScrollerPlayer : MonoBehaviour
 
     private float moveInput;
     private bool isFacingRight = false;
+    private bool movementEnabled = true;
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
+        if (!enabled)
+        {
+            moveInput = 0f;
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            animator.SetFloat("Speed", 0f);
+        }
+    }
 
     void Start()
     {
@@ -22,7 +34,7 @@ public class SideScrollerPlayer : MonoBehaviour
 
     void Update()
     {
-        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
+        if (!movementEnabled || MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen)
         {
             moveInput = 0f;
             animator.SetFloat("Speed", 0f);
@@ -49,7 +61,7 @@ public class SideScrollerPlayer : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
+        if (!movementEnabled || MazeManager.IsAnyMazeActive || MazeManager.IsTipsShowing || SortManager.IsAnySortActive || ColorManager.IsAnyColorActive || InventoryUI.IsOpen) return;
         rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
     }
 }

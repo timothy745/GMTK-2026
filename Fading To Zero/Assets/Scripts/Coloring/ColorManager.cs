@@ -59,8 +59,12 @@ public class ColorManager : MonoBehaviour
     [SerializeField] private Sprite rewardSprite;
     [SerializeField] private string rewardName = "Photo Piece";
 
-    [Header("Locked")]
-    [SerializeField] private Sprite lockedSprite;
+    [Header("Audio")]
+    [SerializeField] private AudioClip clockTickClip;
+    [SerializeField] private AudioClip screamClip;
+
+    [Header("Dialog")]
+    [SerializeField] private MinigameDialog minigameDialog;
 
     private ColorRenderer colorRenderer;
     private ColorPlayerController playerController;
@@ -74,6 +78,8 @@ public class ColorManager : MonoBehaviour
 
     private float timeRemaining;
     private bool colorActive;
+    private int lastDisplayedSecond;
+    private AudioSource sfxSource;
 
     public RectTransform SubmitButtonRect { get; private set; }
 
@@ -89,6 +95,9 @@ public class ColorManager : MonoBehaviour
         interactable = GetComponent<ColorInteractable>();
         if (interactable == null)
             interactable = gameObject.AddComponent<ColorInteractable>();
+
+        sfxSource = gameObject.AddComponent<AudioSource>();
+        sfxSource.playOnAwake = false;
 
         EnsureCanvasSetup();
     }
@@ -406,6 +415,8 @@ public class ColorManager : MonoBehaviour
         timeRemaining = timeLimit;
         colorActive = true;
         IsAnyColorActive = true;
+        lastDisplayedSecond = Mathf.CeilToInt(timeLimit);
+        BGMManager.PauseBGM();
 
         colorRenderer.BuildGrid(referenceSprite, paletteColors, colorContainer, tableSprite);
         colorContainer.SetAsLastSibling();
@@ -535,6 +546,9 @@ public class ColorManager : MonoBehaviour
         IsTipsShowing = false;
         IsAnyColorActive = false;
         colorCanvas.gameObject.SetActive(false);
+        BGMManager.ResumeBGM();
+
+        if (sfxSource != null) sfxSource.Stop();
 
         if (tipsOverlay != null)
             tipsOverlay.SetActive(false);
@@ -558,19 +572,7 @@ public class ColorManager : MonoBehaviour
         if (!fromFail)
         {
             ResetPaperVisuals();
-
-            if (paperObject != null)
-            {
-                if (paperRenderer != null && lockedSprite != null)
-                {
-                    paperRenderer.sprite = lockedSprite;
-                    paperRenderer.color = Color.white;
-                }
-                else
-                {
-                    paperObject.SetActive(false);
-                }
-            }
+            if (colorContainer != null) colorContainer.anchoredPosition = Vector2.zero;
 
             foreach (SpriteRenderer sr in GetComponentsInChildren<SpriteRenderer>())
             {
@@ -667,6 +669,11 @@ public class ColorManager : MonoBehaviour
         if (colorContainer != null)
             colorContainer.gameObject.SetActive(false);
 
+        BGMManager.ResumeBGM();
+
+        if (minigameDialog != null)
+            minigameDialog.ShowWinDialog();
+
         PlayCountdown(1, 0);
         StartCoroutine(ShatterPaper());
 
@@ -684,17 +691,23 @@ public class ColorManager : MonoBehaviour
             paperRenderer.transform.localRotation = Quaternion.identity;
         }
 
+        BGMManager.ResumeBGM();
+
         if (maw != null && maw2Sprite != null && maw3Sprite != null)
         {
             colorContainer.gameObject.SetActive(false);
             maw.PlayJumpscare(maw2Sprite, maw3Sprite, () =>
             {
                 CloseColoring(true);
-            });
+                if (minigameDialog != null)
+                    minigameDialog.ShowFailDialog();
+            }, screamClip);
         }
         else
         {
             CloseColoring(true);
+            if (minigameDialog != null)
+                minigameDialog.ShowFailDialog();
         }
     }
 
@@ -709,6 +722,16 @@ public class ColorManager : MonoBehaviour
 
         int seconds = Mathf.CeilToInt(timeRemaining);
         timerText.text = seconds + "s";
+
+        if (seconds != lastDisplayedSecond)
+        {
+            lastDisplayedSecond = seconds;
+            if (clockTickClip != null)
+            {
+                sfxSource.Stop();
+                sfxSource.PlayOneShot(clockTickClip);
+            }
+        }
 
         if (timeRemaining <= 10f)
         {
@@ -837,17 +860,8 @@ public class ColorManager : MonoBehaviour
 
         if (paperRenderer != null)
         {
-            if (lockedSprite != null)
-            {
-                paperRenderer.gameObject.SetActive(true);
-                paperRenderer.sprite = lockedSprite;
-                paperRenderer.color = Color.white;
-            }
-            else
-            {
-                paperRenderer.gameObject.SetActive(false);
-                paperRenderer = null;
-            }
+            paperRenderer.gameObject.SetActive(false);
+            paperRenderer = null;
         }
 
         CloseColoring();
