@@ -1,24 +1,11 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.SceneManagement; // Wajib ditambahkan untuk manajemen scene
 
-public class SceneController : MonoBehaviour
+public class MainMenuManager : MonoBehaviour
 {
-    // Load any scene by passing its exact name
-    public void LoadScene(string sceneName)
+    // Method harus public agar bisa dibaca oleh Button
+    public void LoadSceneByName(string sceneName)
     {
         SceneManager.LoadScene(sceneName);
-    }
-
-    // Reload the active scene (Great for Restart buttons)
-    public void ReloadCurrentScene()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    // Exit the game application
-    public void QuitGame()
-    {
-        Application.Quit();
-        Debug.Log("Game Exited"); // Visible only in the Unity Editor
     }
 }
