@@ -10,7 +10,6 @@ public class MazeRenderer : MonoBehaviour
     private List<Image> whiteTiles = new List<Image>();
 
     public Vector2Int ExitPosition { get; private set; }
-
     public List<Image> WhiteTiles => whiteTiles;
 
     public void BuildMaze(MazeGenerator.Cell[,] grid, RectTransform container, int mazeWidth, int mazeHeight)
@@ -18,27 +17,32 @@ public class MazeRenderer : MonoBehaviour
         mazeContainer = container;
         whiteTiles.Clear();
 
+        // 1. Bersihkan tile lama
         foreach (Transform child in mazeContainer)
             Destroy(child.gameObject);
 
-        // Center the container on the canvas
+        // 2. Set anchor & pivot container ke tengah
         mazeContainer.anchorMin = new Vector2(0.5f, 0.5f);
         mazeContainer.anchorMax = new Vector2(0.5f, 0.5f);
         mazeContainer.pivot = new Vector2(0.5f, 0.5f);
         mazeContainer.anchoredPosition = Vector2.zero;
 
-        // Scale cell size to fit within the screen
+        // 3. Hitung skala cellSize agar muat di Canvas
         Canvas canvas = mazeContainer.GetComponentInParent<Canvas>();
-        float maxW = canvas.pixelRect.width * 0.85f;
-        float maxH = canvas.pixelRect.height * 0.85f;
-        float fitW = maxW / mazeWidth;
-        float fitH = maxH / mazeHeight;
-        cellSize = Mathf.Min(fitW, fitH, 48f);
+        if (canvas != null)
+        {
+            float maxW = canvas.pixelRect.width * 0.85f;
+            float maxH = canvas.pixelRect.height * 0.85f;
+            float fitW = maxW / mazeWidth;
+            float fitH = maxH / mazeHeight;
+            cellSize = Mathf.Min(fitW, fitH, 48f);
+        }
 
         float totalWidth = mazeWidth * cellSize;
         float totalHeight = mazeHeight * cellSize;
         mazeContainer.sizeDelta = new Vector2(totalWidth + wallThickness, totalHeight + wallThickness);
 
+        // 4. Generate lantai dan tembok
         for (int x = 0; x < mazeWidth; x++)
         {
             for (int y = 0; y < mazeHeight; y++)
@@ -70,7 +74,7 @@ public class MazeRenderer : MonoBehaviour
         // Start marker (green)
         CreateTile(GetCellPosition(0, 0, mazeWidth, mazeHeight), new Vector2(cellSize * 0.3f, cellSize * 0.3f), Color.green, "Start");
 
-        // Exit marker (gold)
+        // Exit marker (yellow)
         ExitPosition = new Vector2Int(mazeWidth - 1, mazeHeight - 1);
         CreateTile(GetCellPosition(ExitPosition.x, ExitPosition.y, mazeWidth, mazeHeight), new Vector2(cellSize * 0.3f, cellSize * 0.3f), Color.yellow, "Exit");
     }
@@ -80,30 +84,45 @@ public class MazeRenderer : MonoBehaviour
         return cellSize;
     }
 
-    private Vector2 GetCellPosition(int x, int y, int mazeWidth, int mazeHeight)
+    // ========================================================================
+    // FUNGSI PERBAIKAN POSISI (AGAR MASUK PAS DI DALAM FRAME)
+    // ========================================================================
+
+    public Vector2 GetCellPosition(int x, int y, int width, int height)
     {
-        float offsetX = -(mazeWidth * cellSize) / 2f + cellSize / 2f;
-        float offsetY = -(mazeHeight * cellSize) / 2f + cellSize / 2f;
-        return new Vector2(x * cellSize + offsetX, y * cellSize + offsetY);
+        float totalWidth = width * cellSize;
+        float totalHeight = height * cellSize;
+
+        // Offset ini yang menarik titik (0,0) ke pojok kiri-bawah container
+        // Sehingga seluruh maze berada presisi di tengah-tengah frame container
+        float startX = -totalWidth / 2f + cellSize / 2f;
+        float startY = -totalHeight / 2f + cellSize / 2f;
+
+        return new Vector2(startX + (x * cellSize), startY + (y * cellSize));
     }
 
-    private void CreateTile(Vector2 position, Vector2 size, Color color, string tileName)
+    private Image CreateTile(Vector2 anchoredPos, Vector2 size, Color color, string name)
     {
-        GameObject tile = new GameObject(tileName);
-        tile.transform.SetParent(mazeContainer, false);
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        
+        // Wajib set worldPositionStays = false agar posisinya terkunci di UI
+        go.transform.SetParent(mazeContainer, false); 
 
-        RectTransform rect = tile.AddComponent<RectTransform>();
+        RectTransform rect = go.GetComponent<RectTransform>();
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = position;
         rect.sizeDelta = size;
+        rect.anchoredPosition = anchoredPos; // Gunakan anchoredPosition khusus UI
 
-        Image img = tile.AddComponent<Image>();
+        Image img = go.GetComponent<Image>();
         img.color = color;
-        img.raycastTarget = false;
 
         if (color == Color.white)
+        {
             whiteTiles.Add(img);
+        }
+
+        return img;
     }
 }
