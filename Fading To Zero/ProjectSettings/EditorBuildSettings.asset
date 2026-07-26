@@ -11,6 +11,27 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Start_Scene.unity
     guid: 3270856883d1fc248849b0bd7876c0d5
+  - enabled: 1
+    path: Assets/Scenes/Main_Menu.unity
+    guid: bb1d857fa3a8caa4faaa2e666d149ae5
+  - enabled: 1
+    path: Assets/Scenes/Ending_Scene.unity
+    guid: e63b9bb8e72b6484da18dcff8fdf6bf2
+  - enabled: 1
+    path: Assets/Scenes/Interior_Bedroom.unity
+    guid: 9751097367e99084ea68c5c73358192f
+  - enabled: 1
+    path: Assets/Scenes/Interior_Canvas.unity
+    guid: ccda85a609dd965479206415d18d8273
+  - enabled: 1
+    path: Assets/Scenes/Interior_House.unity
+    guid: 3369be532d786ec4ab49d2b276ac1e2a
+  - enabled: 1
+    path: Assets/Scenes/Interior_School.unity
+    guid: 36df5e5ae52ade144b2a173712cdf520
+  - enabled: 1
+    path: Assets/Scenes/IsometricHouse.unity
+    guid: db4a4e16535644c46a08ae782fd48257
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
