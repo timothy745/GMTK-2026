@@ -11,7 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Start_Scene.unity
     guid: 3270856883d1fc248849b0bd7876c0d5
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Main_Menu.unity
     guid: bb1d857fa3a8caa4faaa2e666d149ae5
   - enabled: 1
@@ -29,7 +29,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Interior_School.unity
     guid: 36df5e5ae52ade144b2a173712cdf520
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/IsometricHouse.unity
     guid: db4a4e16535644c46a08ae782fd48257
   m_configObjects:

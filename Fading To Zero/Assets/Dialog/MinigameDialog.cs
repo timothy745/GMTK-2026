@@ -52,8 +52,7 @@ public class MinigameDialog : MonoBehaviour
     public void ShowWinDialog()
     {
         player = GameObject.FindGameObjectWithTag("Player");
-        SideScrollerPlayer pm = player != null ? player.GetComponent<SideScrollerPlayer>() : null;
-        if (pm != null) pm.SetMovementEnabled(false);
+        DisableMovement();
 
         activeAudioClips = winDialogAudioClips;
         ShowDialog(winSpeakerName, winDialogLines);
@@ -62,11 +61,28 @@ public class MinigameDialog : MonoBehaviour
     public void ShowFailDialog()
     {
         player = GameObject.FindGameObjectWithTag("Player");
-        SideScrollerPlayer pm = player != null ? player.GetComponent<SideScrollerPlayer>() : null;
-        if (pm != null) pm.SetMovementEnabled(false);
+        DisableMovement();
 
         activeAudioClips = failDialogAudioClips;
         ShowDialog(failSpeakerName, failDialogLines);
+    }
+
+    void DisableMovement()
+    {
+        if (player == null) return;
+        SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(false); return; }
+        PlayerMovementIsometric iso = player.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) iso.SetMovementEnabled(false);
+    }
+
+    void EnableMovement()
+    {
+        if (player == null) return;
+        SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(true); return; }
+        PlayerMovementIsometric iso = player.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) iso.SetMovementEnabled(true);
     }
 
     public void ShowDialog(string speaker, string[] lines, System.Action done = null)
@@ -160,8 +176,7 @@ public class MinigameDialog : MonoBehaviour
 
         if (dialogPanel != null) dialogPanel.SetActive(false);
 
-        SideScrollerPlayer pm = player != null ? player.GetComponent<SideScrollerPlayer>() : null;
-        if (pm != null) pm.SetMovementEnabled(true);
+        EnableMovement();
 
         onDialogDone?.Invoke();
     }

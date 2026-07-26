@@ -32,11 +32,24 @@ public class TriggerZoneDialog : MonoBehaviour
     private bool playerInside = false;
     private bool inDialog = false;
     private bool isTyping = false;
+    private bool dialogCompleted = false;
     private int currentLine = 0;
     private GameObject player;
+    private bool movementDisabled = false;
     private Coroutine typeCoroutine;
     private bool useCustomUI;
     private AudioSource audioSource;
+
+    private static GameObject lastPlayer;
+
+    public static void ForceReEnableMovement()
+    {
+        if (lastPlayer == null) return;
+        SideScrollerPlayer pm = lastPlayer.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(true); return; }
+        PlayerMovementIsometric iso = lastPlayer.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) iso.SetMovementEnabled(true);
+    }
 
     void Start()
     {
@@ -50,12 +63,10 @@ public class TriggerZoneDialog : MonoBehaviour
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
 
-        // Cek apakah user sudah assign UI di Inspector
         useCustomUI = (dialogPanel != null && nameText != null && dialogText != null);
 
         if (useCustomUI)
         {
-            // Pakai UI buatan user
             dialogPanel.SetActive(false);
 
             if (nextButton != null)
@@ -68,6 +79,12 @@ public class TriggerZoneDialog : MonoBehaviour
 
     void Update()
     {
+        if (!inDialog)
+        {
+            if (movementDisabled)
+                EnablePlayerMovement();
+        }
+
         if (playerInside && player != null && !inDialog)
         {
             if (Input.GetKeyDown(KeyCode.E))
@@ -85,6 +102,7 @@ public class TriggerZoneDialog : MonoBehaviour
     {
         inDialog = true;
         currentLine = 0;
+        dialogCompleted = false;
 
         if (useCustomUI)
         {
@@ -115,8 +133,13 @@ public class TriggerZoneDialog : MonoBehaviour
         }
         else
         {
+            dialogCompleted = true;
             if (nextButton != null) nextButton.gameObject.SetActive(false);
-            if (closeButton != null) closeButton.gameObject.SetActive(true);
+
+            if (closeButton != null)
+                closeButton.gameObject.SetActive(true);
+            else
+                EndDialog();
         }
     }
 
@@ -147,35 +170,68 @@ public class TriggerZoneDialog : MonoBehaviour
             return;
         }
 
+        if (dialogCompleted)
+        {
+            EndDialog();
+            return;
+        }
+
         currentLine++;
         ShowLine();
     }
 
     void EndDialog()
     {
+        bool wasInDialog = inDialog;
         inDialog = false;
+        dialogCompleted = false;
 
         if (typeCoroutine != null) StopCoroutine(typeCoroutine);
 
         if (useCustomUI && dialogPanel != null)
             dialogPanel.SetActive(false);
 
-        if (triggerOnce)
+        EnablePlayerMovement();
+
+        if (wasInDialog && triggerOnce)
             Destroy(gameObject);
+    }
+
+    void DisablePlayerMovement()
+    {
+        if (player == null) { Debug.Log("[TZD] DisablePlayerMovement: player is null!"); return; }
+        lastPlayer = player;
+        SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(false); movementDisabled = true; Debug.Log("[TZD] Disabled SideScrollerPlayer movement"); return; }
+        PlayerMovementIsometric iso = player.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) { iso.SetMovementEnabled(false); movementDisabled = true; Debug.Log("[TZD] Disabled IsometricPlayer movement"); return; }
+        Debug.LogWarning("[TZD] No movement script found on player! Player name: " + player.name);
+    }
+
+    void EnablePlayerMovement()
+    {
+        movementDisabled = false;
+        if (player != null) lastPlayer = player;
+        GameObject target = player != null ? player : lastPlayer;
+        if (target == null) { Debug.LogWarning("[TZD] EnablePlayerMovement: no target!"); return; }
+
+        SideScrollerPlayer pm = target.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(true); Debug.Log("[TZD] Enabled SideScrollerPlayer movement"); return; }
+        PlayerMovementIsometric iso = target.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) { iso.SetMovementEnabled(true); Debug.Log("[TZD] Enabled IsometricPlayer movement"); return; }
+        Debug.LogWarning("[TZD] No movement script found on target! Target name: " + target.name);
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
         {
+            lastPlayer = other.gameObject;
             playerInside = true;
             player = other.gameObject;
 
-            if (disableSideScrollerPlayer && player != null)
-            {
-                SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
-                if (pm != null) pm.SetMovementEnabled(false);
-            }
+            if (disableSideScrollerPlayer)
+                DisablePlayerMovement();
 
             if (autoStartDialog && !hasTriggered && !inDialog)
             {
@@ -188,17 +244,26 @@ public class TriggerZoneDialog : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            if (disableSideScrollerPlayer && player != null)
-            {
-                SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
-                if (pm != null) pm.SetMovementEnabled(true);
-            }
+            if (disableSideScrollerPlayer)
+                EnablePlayerMovement();
 
             playerInside = false;
             player = null;
 
             if (inDialog) EndDialog();
         }
+    }
+
+    void OnDisable()
+    {
+        if (movementDisabled)
+            EnablePlayerMovement();
+    }
+
+    void OnDestroy()
+    {
+        if (movementDisabled)
+            ForceReEnableMovement();
     }
 
     void OnDrawGizmos()

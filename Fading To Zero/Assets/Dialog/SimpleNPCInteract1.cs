@@ -95,8 +95,25 @@ public class SimpleNPCInteract : MonoBehaviour
 
         TypeLine();
 
+        DisableMovement();
+    }
+
+    void DisableMovement()
+    {
+        if (player == null) return;
         SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
-        if (pm != null) pm.SetMovementEnabled(false);
+        if (pm != null) { pm.SetMovementEnabled(false); return; }
+        PlayerMovementIsometric iso = player.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) iso.SetMovementEnabled(false);
+    }
+
+    void EnableMovement()
+    {
+        if (player == null) return;
+        SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
+        if (pm != null) { pm.SetMovementEnabled(true); return; }
+        PlayerMovementIsometric iso = player.GetComponent<PlayerMovementIsometric>();
+        if (iso != null) iso.SetMovementEnabled(true);
     }
 
     void TypeLine()
@@ -146,7 +163,6 @@ public class SimpleNPCInteract : MonoBehaviour
 
         if (dialogPanel != null) dialogPanel.SetActive(false);
 
-        SideScrollerPlayer pm = player.GetComponent<SideScrollerPlayer>();
-        if (pm != null) pm.SetMovementEnabled(true);
+        EnableMovement();
     }
 }

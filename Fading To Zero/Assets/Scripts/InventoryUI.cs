@@ -58,6 +58,17 @@ public class InventoryUI : MonoBehaviour
         TryPlayPhotoPieceAnimation(itemName);
     }
 
+    public static int GetPhotoPieceCount()
+    {
+        int count = 0;
+        foreach (var item in collectedItems)
+        {
+            if (item.itemName.Contains("Photo Piece"))
+                count++;
+        }
+        return count;
+    }
+
     private void TryPlayPhotoPieceAnimation(string itemName)
     {
         if (itemName.Contains("PhotoPiece_1"))
